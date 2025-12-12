@@ -7,5 +7,5 @@ This repository is the implement of our paper Identity Suppression Awareness for
 ```
 pip install -r requirements.txt
 ```
-* Download the ISA-DPL checkpoints and the pre-trained checkpoints form [here](https://pan.baidu.com/s/1u16MkoM_PPXb7L5e_PsiVg?pwd=hm4a), and put them into vitfer/checkpoint/ and vitfer/premodels/.
+* Download the ISA-DPL checkpoints and the pre-trained checkpoints form [here](https://pan.baidu.com/s/1u16MkoM_PPXb7L5e_PsiVg?pwd=hm4a), and put them into vitfer/checkpoint/ and vitfer/prem_odels/.
 
