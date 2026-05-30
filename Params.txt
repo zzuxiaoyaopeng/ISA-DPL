@@ -1,0 +1,39 @@
+To ensure complete reproducibility of our method, this document systematically compiles the architectural designs, network configurations, and critical hyperparameter settings of all core modules. The following sections cover layer specifications, kernel sizes, activation function selections, and detailed training hyperparameters for reference and verification.
+
+
+(1) ISA Module.
+The ISA module consists of two parallel DRNet branches. Each branch adopts two successive 1 × 1 pointwise convolutions: Conv2d (512, 16, kernel_size = 1) and Conv2d (16, 1, kernel_size = 1), which compresses the channel dimension from 512 to 16. The generated weight map is applied to reweight the original features. After reweighting, two residual-style 1 × 1 convolutions Conv2d (512, 512, kernel_size = 1) are utilized for further feature transformation.
+
+(2) MPF Module.
+The MPF module takes three-layer features from the FER path ($F_{f1}, F_{f2}, F_{f3}$) and three-layer landmark features from the AU path ($F_{l1}, F_{l2}, F_{l3}$) as inputs.
+
+For scale alignment:
+
+• $F_{f1}$ is downsampled from 56 × 56 to 28 × 28 via a 3 × 3 convolution with configuration (64 → 64, stride = 2, padding = 1);
+• $F_{f2}$ is downsampled from 28 × 28 to 14 × 14 via a 3 × 3 convolution with configuration (128 → 128, stride = 2, padding = 1);
+• $F_{f3}$ is downsampled from 14 × 14 to 7 × 7 via a 3 × 3 convolution with configuration (256 → 256, stride = 2, padding = 1);
+• The top-level feature of the AU path is processed by a 3 × 3 convolution (512 → 256, padding = 1) for scale matching.
+
+Window-based cross-path self-attention is performed at three individual scales. The window sizes are set to 28, 14 and 7 correspondingly, and the number of attention heads is 2, 4 and 8 respectively. Each attention output is fed into a feed-forward network for feature refinement, producing three cross-path fused features $F_{m1}$, $F_{m2}$ and $F_{m3}$.
+
+For pyramid aggregation to obtain the final cross-fused feature $F_{CF}$:
+
+1. $F_{m1}$ is projected to the same resolution as $F_{m2}$ via a 3 × 3 convolution (64 → 128, stride = 2, padding = 1), then summed with $F_{m2}$;
+2. The fused result is further projected to match the scale of $F_{m3}$ using a 3 × 3 convolution (128 → 256, stride = 2, padding = 1), followed by element-wise addition with $F_{m3}$;
+3. A final 1 × 1 convolution (256 → 512) is adopted to generate $F_{CF}$.
+
+**(3) PCViT Module.** 
+PCViT is implemented as a dual-stream pyramid Vision Transformer. The input FER tokens and landmark tokens are formatted into sequences with a length of 50 and an embedding dimension of 512. 
+This module adopts a three-scale pyramid structure. Two Conv1d layers are used for downsampling to construct medium-scale and small-scale tokens, with kernel_size = 2, stride = 2 and kernel_size = 4, stride = 4 respectively. The network is stacked with 8 pyramid blocks, each supporting three-scale parallel modeling and dual-stream cross-path interaction.
+
+The key hyperparameters and internal configurations are listed below:
+
+• Number of multi-head attention heads: 8
+• Embedding dimension: 512
+• MLP ratio: 2
+• Layer normalization: LayerNorm(eps = 1e-6)
+• Activation function: GELU
+• qkv_bias = True
+• drop_rate = 0.0, attn_drop_rate = 0.0, drop_path_rate = 0.1
+
+For outputs, PCViT generates global discriminative features for the main FER task, and meanwhile yields AU prediction results via an auxiliary branch.
